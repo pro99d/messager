@@ -1,7 +1,23 @@
+from collections.abc import Callable
+import logging
+from typing import Type
 type name = str
+
+LOG_FILE = "mes.log"
+logging.basicConfig(
+                    filename=LOG_FILE,
+                    filemode='a',
+                    format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
+                    datefmt='%H:%M:%S',
+                    level=logging.INFO
+                    )
+
+logger = logging.Logger("module logger")
 class Module:
-    def __init__(self, name: str) -> None:
-        self.name: str = name
+    def __init__(self, module_name: name= "missing", module_type: str= "missing") -> None:
+        self._name: name = module_name
+        self._type: str = module_type
+        logging.info(f"Module {module_name} initialized successfully.")
 
     def _get_fields(self) -> list[name]:
         methods = []
@@ -14,11 +30,12 @@ class ModuleManager:
     def __init__(self) -> None:
         self.modules: dict[name, Module] = {}
 
-    def init_module(self, module: Module) -> None:
-        self.modules[module.name] = module
+    def init_module(self, module: Type[Module]) -> None:
+        mod = module()
+        self.modules[mod._name] = mod
 
-    def get_methods(self, method_name: name) -> list[function]:
-        methods: list[function] = []
+    def get_methods(self, method_name: name) -> list[Callable]:
+        methods: list[Callable] = []
         for module in self.modules.values():
             if method_name in module._get_fields():
                 methods.append(getattr(module, method_name))
