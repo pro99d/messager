@@ -2,8 +2,11 @@ from collections.abc import Callable
 import logging
 from typing import Type
 type name = str
+import os
+from .vars import *
 
-LOG_FILE = "mes.log"
+if os.path.exists(LOG_FILE):
+    os.rename(LOG_FILE, LOG_FILE + ".old")
 logging.basicConfig(
                     filename=LOG_FILE,
                     filemode='a',
@@ -41,11 +44,18 @@ class ModuleManager:
                 methods.append(getattr(module, method_name))
         return methods
 
-    def get_module(self, module_name: name) -> Module:
+    def get_module_by_name(self, module_name: name) -> Module:
         if module_name in self.modules.keys():
             return self.modules[module_name]
         else:
             raise ModuleNotFoundError(f"Module {module_name} is not found. Is it loaded?")
+    
+    def get_module_by_type(self, module_type: name) -> list[Module]:
+        modules: list[Module] = []
+        for module in self.modules.values():
+            if module.type == module_type:
+                modules.append(module)
+        return modules
 
 if __name__ == "__main__":
     m = Module("Test")
