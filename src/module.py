@@ -1,3 +1,4 @@
+from __future__ import annotations
 from collections.abc import Callable
 import logging
 from typing import Type
@@ -28,6 +29,46 @@ class Module:
             if not i.startswith("_"):
                 methods.append(i)
         return methods
+
+class UI(Module):
+    def __init__(self, module_name: name= "template"):
+        super().__init__(module_name= module_name, module_type= "UI")
+    def init_mod(self, net: Network) -> None:
+        self.net = net
+
+    def on_message_recive(self, msg: str, sender: src) -> None:
+        pass
+
+class Encryption(Module):
+    def __init__(self, module_name: name= "template"):
+        super().__init__(module_name= module_name, module_type= "Enc")
+
+    def encrypt(self, msg: str) -> str:
+        return msg
+    
+    def decrypt(self, msg: str) -> str:
+        return msg
+
+class ConfigParser(Module):
+    def __init__(self, module_name: name= "template"):
+        super().__init__(module_name= module_name, module_type= "ConfigParser")
+
+class Network(Module):
+    def __init__(self, module_name: name= "template"):
+        super().__init__(module_name= module_name, module_type= "Network")
+
+    def init_network(self, encryption: Encryption, ui: UI) -> None:
+        self.encryption = encryption
+        self.ui = ui
+
+    def send_msg(self, msg: str, dest: str) -> None:
+        pass
+
+    def start_msg(self) -> None:
+        pass
+
+    def stop_server(self) -> None:
+        pass
 
 class ModuleManager:
     def __init__(self) -> None:
