@@ -1,11 +1,13 @@
+import json
+import threading
+import time
+from dataclasses import dataclass
+from threading import Thread
+
+from socket_for_humans import Connection, Server
+
 from src import module
 from src.vars import *
-from dataclasses import dataclass
-import threading
-from threading import Thread
-from socket_for_humans import Server, Connection
-import json
-import time
 
 @dataclass
 class Config:
@@ -115,10 +117,6 @@ class Network(module.Network):
                     self.active_connections.remove(sender_ip)
                 case "quit":
                     break
-            # if formated["type"] == "message":
-            # elif formated["type"] == "quit":
-            #     break
-            # elif formated["type"]
             
     def stop_server(self) -> None:
         if self.server_running:
