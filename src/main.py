@@ -4,7 +4,7 @@ import os
 import pathlib
 from dataclasses import dataclass
 import mods
-from .vars import *
+from src.vars import *
 
 def format_path(path: pathlib.Path) -> str:
     strpath = str(path)
@@ -38,6 +38,7 @@ class Starter:
         self.encryption = self.module_manager.get_module_by_name(config.encryption)
         self.net.init_network(encryption= self.encryption, ui= self.ui) 
         self.ui.init_mod(self.net)
+        self.ui.start_ui()
 
     def start(self) -> None:
         self.net.send_msg("Hi!", '127.0.0.1')
@@ -57,6 +58,8 @@ def main():
         # print(e)
     finally:
         starter.net.stop_server()
+        starter.ui.stop_ui()
+
 
 if __name__ == "__main__":
     main()

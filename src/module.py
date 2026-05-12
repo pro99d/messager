@@ -36,7 +36,10 @@ class UI(Module):
     def init_mod(self, net: Network) -> None:
         self.net = net
 
-    def on_message_recive(self, msg: str, sender: src) -> None:
+    def on_message_recive(self, msg: str, sender: str) -> None:
+        pass
+    
+    def stop_ui(self) -> None:
         pass
 
 class Encryption(Module):
