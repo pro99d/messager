@@ -64,7 +64,7 @@ class Network(Module):
         self.encryption = encryption
         self.ui = ui
 
-    def send_msg(self, msg: str, dest: str) -> None:
+    def send_msg(self, msg: str, dest: str, msg_type: str="message") -> None:
         pass
 
     def start_msg(self) -> None:

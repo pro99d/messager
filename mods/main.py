@@ -9,9 +9,25 @@ import socket
 
 from socket_for_humans import Connection, Server
 import textual
+import netifaces
 
 from src import module
 from src.vars import *
+
+
+
+def get_interface_ips():
+    interfaces = netifaces.interfaces()
+    ips = []
+    for interface in interfaces:
+        addrs = netifaces.ifaddresses(interface)
+        if netifaces.AF_INET in addrs:
+            ips.extend([addr['addr'] for addr in addrs[netifaces.AF_INET]])
+        if netifaces.AF_INET6 in addrs:
+            ips.extend([addr['addr'] for addr in addrs[netifaces.AF_INET6]])
+    for i in ips:
+        if i.startswith("192.168"):
+            return i
 
 @dataclass
 class Config:
@@ -78,12 +94,16 @@ class UI(module.UI):
     def __init__(self) -> None:
         super().__init__(module_name= "MainUI")
         # self.ui = MessengerUI()
-        self.ip = socket.gethostbyname(socket.gethostname())
+        self.ip = get_interface_ips()
+        print(self.ip)
         self.chats = Chats()                 # init Chats here; no external chat arg
         self.reserve_bottom = 1
         self.poll_interval = 0.05
         self.input_str = ""
         self.running = True
+    def init_mod(self, net) -> None:
+        super().init_mod(net)
+        self.net.send_message("", input("enter ip that in network. "), "join_message")
 
     def send_message(self, msg: str):
         ip = msg.split(":")[0]
@@ -200,6 +220,7 @@ class Network(module.Network):
     def start_server(self) -> None:
         while True:
             msg, conn, addr = self.server.get_next()
+            print(addr, conn, msg)
             sender_ip = addr[0]
             msg = self.enc.decrypt(msg)
             formated = json.loads(msg)
