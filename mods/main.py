@@ -4,7 +4,7 @@ import time
 from dataclasses import dataclass
 from threading import Thread
 import curses
-from typing import List, Dict
+from typing import List, Dict, Set
 import socket
 
 from socket_for_humans import Connection, Server
@@ -96,7 +96,7 @@ class UI(module.UI):
         # self.ui = MessengerUI()
         self.ip = get_interface_ips()
         print(self.ip)
-        self.chats = Chats()                 # init Chats here; no external chat arg
+        self.chats: Chats = Chats()                 # init Chats here; no external chat arg
         self.reserve_bottom = 1
         self.poll_interval = 0.05
         self.input_str = ""
@@ -189,69 +189,106 @@ class UI(module.UI):
         self.add_message(msg, sender, self.ip)
         print(f"{sender:<10}| {msg}")
 
-
 class Network(module.Network):
     def __init__(self) -> None:
-        super().__init__(module_name= "MainNet")
+        super().__init__(module_name="MainNet")
         self.server_running = True
-        addr = ('0.0.0.0', SERVER_PORT)
-        self.active_connections = set()
+        self.addr = ('0.0.0.0', SERVER_PORT)
+        self.active_connections: Set[str] = set()
+        self._ac_lock = threading.Lock()
+        self.enc = None
+        self.ui = None
+        self._server_thread = None
 
     def init_network(self, encryption: module.Encryption, ui: module.UI) -> None:
         self.enc = encryption
         self.ui = ui
-        addr = ('0.0.0.0', SERVER_PORT)
-        self.server = Server(addr)
-        server_thread = Thread(target= self.start_server)
-        server_thread.start()
+        self.addr = ('0.0.0.0', SERVER_PORT)
+        self._server_thread = Thread(target=self.start_server, daemon=True)
+        self._server_thread.start()
 
-    def send_msg(self, msg: str, dest: str, msg_type: str= "message") -> None:
+    def send_msg(self, msg: str, dest: str, msg_type: str = "message", timeout: float = 5.0) -> None:
         addr = (dest, SERVER_PORT)
-        client = Connection(addr)
-        formated = {
-            "type": msg_type,
-            "content": msg
-        }
-
-        encrypted = self.enc.encrypt(json.dumps(formated))
-        client.send(encrypted)
-        client.close()
+        try:
+            payload = {"type": msg_type, "content": msg}
+            # assume enc.encrypt returns a str; convert to bytes for network
+            encrypted_bytes = self.enc.encrypt(json.dumps(payload)).encode()
+            with socket.create_connection(addr, timeout=timeout) as s:
+                s.sendall(encrypted_bytes)
+        except Exception:
+            # fail silently or log as needed
+            pass
 
     def start_server(self) -> None:
-        while True:
-            msg, conn, addr = self.server.get_next()
-            if not addr:
-                continue
-            # print(addr, conn, msg)
-            sender_ip = addr[0]
-            msg = self.enc.decrypt(msg)
-            formated = json.loads(msg)
-            match formated["type"]:
-                case "message":
-                    self.ui.on_message_recive(formated["content"], sender_ip)
-                case "join_message":
-                    self.active_connections.add(sender_ip)
-                    if not hasattr(self.ui, "chats"):
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                s.bind(self.addr)
+                s.listen()
+                while self.server_running:
+                    try:
+                        conn, addr = s.accept()
+                    except Exception:
                         continue
+                    Thread(target=self._handle_client, args=(conn, addr), daemon=True).start()
+        finally:
+            self.server_running = False
+
+    def _handle_client(self, conn: socket.socket, addr):
+        with conn:
+            try:
+                data_chunks = []
+                while True:
+                    chunk = conn.recv(4096)
+                    if not chunk:
+                        break
+                    data_chunks.append(chunk)
+                raw = b"".join(data_chunks)
+                if not raw:
+                    return
+                # assume decrypt expects str input; decode first
+                decrypted = self.enc.decrypt(raw.decode())
+                formated = json.loads(decrypted)
+                sender_ip = addr[0]
+                t = formated.get("type")
+                if t == "message":
+                    self.ui.on_message_recive(formated.get("content", ""), sender_ip)
+                elif t == "join_message":
+                    with self._ac_lock:
+                        self.active_connections.add(sender_ip)
+                    if not hasattr(self.ui, "chats"):
+                        return
                     allowed_messages = self.ui.chats.filter_by_access(sender_ip)
                     self.send_msg(json.dumps(allowed_messages), sender_ip, "chats")
-                case "chats":
+                elif t == "chats":
                     if not hasattr(self.ui, "chats"):
-                        continue
-                    messages = json.loads(formated["content"])
+                        return
+                    messages = json.loads(formated.get("content", "[]"))
                     self.ui.chats.update_messages(messages)
-                case "quit_message":
-                    self.active_connections.remove(sender_ip)
-                case "quit":
-                    break
-            
+                elif t == "quit_message":
+                    with self._ac_lock:
+                        self.active_connections.discard(sender_ip)
+                elif t == "quit":
+                    # request to stop server
+                    self.server_running = False
+            except Exception:
+                pass
+
     def stop_server(self) -> None:
         if self.server_running:
-            self.send_msg("", "127.0.0.1", "quit")
+            # trigger server loop to exit by connecting and sending quit
+            try:
+                self.send_msg("", "127.0.0.1", "quit")
+            except Exception:
+                pass
             self.server_running = False
-            if len(self.active_connections) > 0:
-                self.send_msg("", list(self.active_connections)[0], "quit_message")
-    
+            with self._ac_lock:
+                if self.active_connections:
+                    try:
+                        peer = next(iter(self.active_connections))
+                        self.send_msg("", peer, "quit_message")
+                    except Exception:
+                        pass
 
 class ConfigParser(module.ConfigParser):
     def __init__(self) -> None:

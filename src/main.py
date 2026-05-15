@@ -1,4 +1,4 @@
-from . import module
+from src import module
 import importlib
 import os
 import pathlib
