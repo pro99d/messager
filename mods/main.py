@@ -103,7 +103,7 @@ class UI(module.UI):
         self.running = True
     def init_mod(self, net) -> None:
         super().init_mod(net)
-        self.net.send_message("", input("enter ip that in network. "), "join_message")
+        self.net.send_msg("", input("enter ip that in network. "), "join_message")
 
     def send_message(self, msg: str):
         ip = msg.split(":")[0]
@@ -220,7 +220,9 @@ class Network(module.Network):
     def start_server(self) -> None:
         while True:
             msg, conn, addr = self.server.get_next()
-            print(addr, conn, msg)
+            if not addr:
+                continue
+            # print(addr, conn, msg)
             sender_ip = addr[0]
             msg = self.enc.decrypt(msg)
             formated = json.loads(msg)
