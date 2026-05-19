@@ -1,15 +1,11 @@
-import json
 import threading
 import time
 from dataclasses import dataclass
 from threading import Thread
-import curses
 from typing import List, Dict, Set
-import socket
-import logging
 
-import textual
-import netifaces
+from textual.app import App, ComposeResult
+from textual.widgets import Footer, Header
 
 from src import module
 from src.vars import *
@@ -55,20 +51,55 @@ class Chats:
                     result.append(message)
             return result
 
-class UI(module.UI):
+class UI(module.UI, App):
+    """A textual messager app"""
+
+    BINDINGS = [("d", "toggle-dark", "Toggle dark mode")]
+
     def __init__(self) -> None:
-        super().__init__(module_name= "MainUI")
+        super(module.UI, self).__init__(module_name= "MainUI")
 
     def init_mod(self, net) -> None:
         super().init_mod(net)
         # self.net.send_msg("", ip in that network, "join_message")
 
     def start_ui(self):
-        pass
+        self.run()
 
     def stop_ui(self):
         self.running = False
         self.net.stop_server()
-    
-    def on_message_recive(self, msg: str, sender: str) -> None:
-        self.add_message(msg, sender, self.ip)
+
+    def compose(self) -> ComposeResult:
+        """Create child widgets for ui"""
+        yield Header()
+        yield Footer()
+
+    def action_toggle_dark(self) -> None:
+        """An action to toggle dark mode."""
+
+        self.theme = (
+        "textual-dark" if self.theme == "textual-light" else "textual-light"
+        )
+
+class StopwatchApp(App):
+    """A Textual app to manage stopwatches."""
+    BINDINGS = [("d", "toggle_dark", "Toggle dark mode")]
+
+        
+    def compose(self) -> ComposeResult:
+        """Create child widgets for the app."""
+        yield Header()
+        yield Footer()
+
+        
+    def action_toggle_dark(self) -> None:
+        """An action to toggle dark mode."""
+        self.theme = (
+                    
+        "textual-dark" if self.theme == "textual-light" else "textual-light"
+                
+        )
+if __name__ == "__main__":
+    app = StopwatchApp()
+    app.run()
