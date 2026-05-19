@@ -6,8 +6,8 @@ from threading import Thread
 import curses
 from typing import List, Dict, Set
 import socket
+import logging
 
-from socket_for_humans import Connection, Server
 import textual
 import netifaces
 
@@ -112,7 +112,6 @@ class UI(module.UI):
             self.stop_ui()
             return
         self.net.send_msg(msg, ip)
-        # placeholder: add to chats; override if needed
         self.chats.add_message(msg, sender="You", reciver="Other")
 
     def add_message(self, message: str, sender: str, reciver: str):
@@ -137,12 +136,10 @@ class UI(module.UI):
         curses.curs_set(1)
         stdscr.nodelay(True)
         stdscr.keypad(True)
-
         while self.running:
             max_y, max_x = stdscr.getmaxyx()
             scroll = self._compute_scroll(max_y)
             self._draw_messages(stdscr, max_y, max_x, scroll)
-
             prompt = "> "
             input_y = max_y - self.reserve_bottom
             stdscr.move(input_y, 0)
@@ -150,7 +147,6 @@ class UI(module.UI):
             stdscr.addnstr(input_y, 0, prompt + self.input_str, max_x - 1)
             stdscr.move(input_y, len(prompt) + len(self.input_str))
             stdscr.refresh()
-
             try:
                 ch = stdscr.get_wch()
             except curses.error:
@@ -215,9 +211,8 @@ class Network(module.Network):
             encrypted_bytes = self.enc.encrypt(json.dumps(payload)).encode()
             with socket.create_connection(addr, timeout=timeout) as s:
                 s.sendall(encrypted_bytes)
-        except Exception:
-            # fail silently or log as needed
-            pass
+        except Exception as e:
+            logging.error(f"Error {e} in send msg in network. destination: {dest}")
 
     def start_server(self) -> None:
         try:
