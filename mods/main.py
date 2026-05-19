@@ -187,7 +187,6 @@ class UI(module.UI):
     
     def on_message_recive(self, msg: str, sender: str) -> None:
         self.add_message(msg, sender, self.ip)
-        print(f"{sender:<10}| {msg}")
 
 class Network(module.Network):
     def __init__(self) -> None:
