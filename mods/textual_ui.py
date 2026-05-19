@@ -3,6 +3,7 @@ import time
 from dataclasses import dataclass
 from threading import Thread
 from typing import List, Dict, Set
+import logging
 
 from textual.app import App, ComposeResult
 from textual.widgets import Footer, Header
@@ -50,56 +51,18 @@ class Chats:
                 if ip in (message["sender"], message["reciver"]):
                     result.append(message)
             return result
-
-class UI(module.UI, App):
-    """A textual messager app"""
-
-    BINDINGS = [("d", "toggle-dark", "Toggle dark mode")]
-
+class UI(module.UI):
     def __init__(self) -> None:
-        super(module.UI, self).__init__(module_name= "MainUI")
+        super().__init__(module_name= "MainUI")
 
     def init_mod(self, net) -> None:
         super().init_mod(net)
         # self.net.send_msg("", ip in that network, "join_message")
 
     def start_ui(self):
-        self.run()
+        pass
 
     def stop_ui(self):
         self.running = False
         self.net.stop_server()
 
-    def compose(self) -> ComposeResult:
-        """Create child widgets for ui"""
-        yield Header()
-        yield Footer()
-
-    def action_toggle_dark(self) -> None:
-        """An action to toggle dark mode."""
-
-        self.theme = (
-        "textual-dark" if self.theme == "textual-light" else "textual-light"
-        )
-
-class StopwatchApp(App):
-    """A Textual app to manage stopwatches."""
-    BINDINGS = [("d", "toggle_dark", "Toggle dark mode")]
-
-        
-    def compose(self) -> ComposeResult:
-        """Create child widgets for the app."""
-        yield Header()
-        yield Footer()
-
-        
-    def action_toggle_dark(self) -> None:
-        """An action to toggle dark mode."""
-        self.theme = (
-                    
-        "textual-dark" if self.theme == "textual-light" else "textual-light"
-                
-        )
-if __name__ == "__main__":
-    app = StopwatchApp()
-    app.run()
