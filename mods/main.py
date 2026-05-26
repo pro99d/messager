@@ -8,8 +8,8 @@ from typing import List, Dict, Set
 import socket
 
 from socket_for_humans import Connection, Server
-import textual
 import netifaces
+import flet as ft
 
 from src import module
 from src.vars import *
@@ -96,7 +96,7 @@ class UI(module.UI):
         # self.ui = MessengerUI()
         self.ip = get_interface_ips()
         print(self.ip)
-        self.chats: Chats = Chats()                 # init Chats here; no external chat arg
+        self.chats: Chats = Chats()
         self.reserve_bottom = 1
         self.poll_interval = 0.05
         self.input_str = ""
@@ -117,69 +117,12 @@ class UI(module.UI):
 
     def add_message(self, message: str, sender: str, reciver: str):
         self.chats.add_message(message, sender, reciver)
+    
+    def run(self, page: ft.page):
+        pass
 
-    def _draw_messages(self, stdscr, max_y: int, max_x: int, scroll: int):
-        stdscr.erase()
-        usable_rows = max_y - self.reserve_bottom
-        msgs = self.chats.snapshot()
-        lines = [f'{m["sender"]}: {m["msg"]}' for m in msgs]
-        for idx in range(usable_rows):
-            msg_idx = idx + scroll
-            if msg_idx < len(lines):
-                stdscr.addnstr(idx, 0, lines[msg_idx], max_x - 1)
-
-    def _compute_scroll(self, max_y: int) -> int:
-        usable_rows = max_y - self.reserve_bottom
-        msgs = self.chats.snapshot()
-        return max(0, len(msgs) - usable_rows)
-
-    def _run(self, stdscr):
-        curses.curs_set(1)
-        stdscr.nodelay(True)
-        stdscr.keypad(True)
-
-        while self.running:
-            max_y, max_x = stdscr.getmaxyx()
-            scroll = self._compute_scroll(max_y)
-            self._draw_messages(stdscr, max_y, max_x, scroll)
-
-            prompt = "> "
-            input_y = max_y - self.reserve_bottom
-            stdscr.move(input_y, 0)
-            stdscr.clrtoeol()
-            stdscr.addnstr(input_y, 0, prompt + self.input_str, max_x - 1)
-            stdscr.move(input_y, len(prompt) + len(self.input_str))
-            stdscr.refresh()
-
-            try:
-                ch = stdscr.get_wch()
-            except curses.error:
-                time.sleep(self.poll_interval)
-                continue
-
-            if isinstance(ch, str):
-                if ch == "\n":
-                    msg = self.input_str.strip()
-                    if msg:
-                        self.send_message(msg)
-                    self.input_str = ""
-                elif ch == "\x1b":
-                    self.running = False
-                elif ch in ("\x7f", "\b"):
-                    self.input_str = self.input_str[:-1]
-                else:
-                    self.input_str += ch
-            elif isinstance(ch, int):
-                if ch == curses.KEY_BACKSPACE:
-                    self.input_str = self.input_str[:-1]
-                elif ch == curses.KEY_RESIZE:
-                    pass
-
-    def run(self):
-        # initialize curses screen here and call internal runner
-        curses.wrapper(self._run)
     def start_ui(self):
-        self.run()
+        ft.run(self.run)
 
     def stop_ui(self):
         self.running = False
