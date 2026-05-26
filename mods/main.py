@@ -81,14 +81,14 @@ class Application(module.Module):
         super().__init__(module_name= "MainApp", module_type= "App")
 
 class Encryption(module.Encryption):
-    def __init__(self) -> None:
+    def __init__(self,key,message):
         super().__init__(module_name= "MainEnc")
-
-    def encrypt(self, msg: str) -> str:
-        return msg
-
-    def decrypt(self, msg: str) -> str:
-        return msg
+        self.key = Fernet(Fernet.generate_key())
+    def encryption(self,key, message: str):
+        message = message.encode()
+        return key.encrypt(message)
+    def decryption(self,key,message):
+        return key.decrypt(message.decode())
 
 class UI(module.UI):
     def __init__(self) -> None:
